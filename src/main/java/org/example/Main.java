@@ -3,19 +3,24 @@ package org.example;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 public class Main {
 
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) throws InterruptedException, ExecutionException {
         String[] texts = new String[25];
         for (int i = 0; i < texts.length; i++) {
             texts[i] = generateText("aab", 30_000);
         }
 
-        long startTs = System.currentTimeMillis(); // start time
-        List<Thread> threads = new ArrayList<>();
+        long startTs = System.currentTimeMillis();
+        ExecutorService executorService = Executors.newFixedThreadPool(5);
+        List<Future<Integer>> futures = new ArrayList<>();
         for (String text : texts) {
-            Thread thread = new Thread(() -> {
+            Future<Integer> future = executorService.submit(() -> {
                 int maxSize = 0;
                 for (int i = 0; i < text.length(); i++) {
                     for (int j = 0; j < text.length(); j++) {
@@ -24,6 +29,7 @@ public class Main {
                         }
                         boolean bFound = false;
                         for (int k = i; k < j; k++) {
+
                             if (text.charAt(k) == 'b') {
                                 bFound = true;
                                 break;
@@ -34,16 +40,16 @@ public class Main {
                         }
                     }
                 }
-                System.out.println(text.substring(0, 100) + " -> " + maxSize);
+                return maxSize;
             });
-            threads.add(thread);
-            thread.start();
+            futures.add(future);
         }
-        for (Thread thread : threads) {
-            thread.join();
+        for (Future<Integer> future : futures) {
+            int maxSize = future.get();
+            System.out.println("Max size: " + maxSize);
         }
+        executorService.shutdown();
         long endTs = System.currentTimeMillis();
-
         System.out.println("Time: " + (endTs - startTs) + "ms");
     }
 
